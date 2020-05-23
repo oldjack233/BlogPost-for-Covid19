@@ -1,0 +1,485 @@
+---
+title: "covid"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(astsa)
+covidConfirm = readxl::read_excel("Countries-Confirmed.xlsx")
+covidDeath = readxl::read_excel("Countries-Deaths.xlsx")
+covidRecoverd = readxl::read_excel("Countries-Recovered.xlsx")
+confirmUSA = covidConfirm$`United States`
+DeathUSA = covidDeath$`United States`
+RecoverUSA = covidRecoverd$`United States`
+plot(confirmUSA, type = "l")
+lines(DeathUSA, col = "red")
+lines(RecoverUSA, col = "green")
+
+
+```
+```{r}
+diff(confirmUSA)
+#use data from t = 30
+confirmUSA.valid = confirmUSA[30:length(confirmUSA)]
+time = 1:length(confirmUSA.valid)
+model.usa.confirm = lm((log(confirmUSA.valid)) ~ time  + I(time^2) + log(time))
+summary(model.usa.confirm)
+plot(log(confirmUSA.valid), type = "l")
+lines(model.usa.confirm$fitted.values, col = "red")
+
+```
+
+```{r}
+#compare with the possible actual data
+library(astsa)
+covidConfirm = readxl::read_excel("covid/Countries-Confirmed.xlsx")
+covidDeath = readxl::read_excel("covid/Countries-Deaths.xlsx")
+covidRecoverd = readxl::read_excel("covid/Countries-Recovered.xlsx")
+confirmUSA = covidConfirm$`United States`
+DeathUSA = covidDeath$`United States`
+RecoverUSA = covidRecoverd$`United States`
+confirmItaly = covidConfirm$Italy
+#from 1point3care, since 100, total 27 data, late 10 is the prediction value as
+#what we do, so only fomer 17 are valuable
+conirmNYsince100 = c(106,142,150,220,327,421,615,967,1578,3038,5704,8403,11727,15800,20884,25681,30841,37877,44876,52410, 59648, 66663, 75833, 83948, 92506, 102987, 113833)
+confirmNYactualPD10 = c(37877,44876,52410, 59648, 66663, 75833, 83948, 92506, 102987, 113833)
+result = c(covid$Count, newpt)
+plot(confirmNewYork10, type = "l")
+lines(as.numeric(newpt), col = "red")
+lines(final.data[33:41], col = "blue")
+lines(LiModel, col = "yellow")
+
+
+#红色我的
+#黄色李的
+#黑色一亩三分地
+#蓝色组的
+
+```
+```{r}
+intcep = model.usa.confirm$coefficients[1]
+co1 = model.usa.confirm$coefficients[2]
+co2 = model.usa.confirm$coefficients[3]
+co3 = model.usa.confirm$coefficients[4]
+summary(model.usa.confirm)
+newpt = rep(0, 10)
+for(i in 1:10) {
+  a = intcep + (60 + i)*co1 +  ((60 + i)^2)*co2 + co3 * log(60 + i)
+  newpt[i] = a
+}
+plot(log(confirmUSA.valid), type = "l", xlim = c(0, 70))
+lines(model.usa.confirm$fitted.values, col = "red")
+lines(60:69, newpt, col = "blue")
+plot(model.usa.confirm$residuals, type = "l")
+
+```
+```{r}
+plot(model.usa.confirm$residuals, type = "l")
+acf2(model.usa.confirm$residuals)
+
+usa.resi = model.usa.confirm$residuals
+model1 = arima(usa.resi, order = c(1,1,0))
+model1
+plot(usa.resi)
+sarima(usa.resi, p=1, d=0, q=4, P=0, D=0, Q=0, S=0)
+```
+
+```{r}
+#compare to another git data
+covidGit = read.csv("covid-19-data-master/us-states.csv")
+NYgit = covidGit[which(covidGit$state == "New York"),]
+over3w10pt.git = NYgit[which(NYgit$cases > 30000),][c(1:10),]
+before3w20pt.git = NYgit[which(NYgit$cases < 30000),][c(5:24),]
+git.10.20 = c(before3w20pt.git$cases,over3w10pt.git$cases)
+mydata20 = covid$Count[c(47:66)]
+mydata10 = as.numeric(newpt)
+my.10.20 = c(mydata20,mydata10)
+#compare to git data
+plot(git.10.20, type = "l")
+lines(21:30, git.10.20[c(21:30)], col = "red")
+lines(my.10.20, col = "blue")
+lines(21:30, my.10.20[c(21:30)], col = "green")
+```
+
+
+
+PROJECT 
+
+
+```{r}
+
+#load
+library(astsa)
+par(mfrow = c(1,2))
+covid = read.csv("covid.csv")
+plot.ts(covid$Count, main = "confirm cases in Timeseria", xlab = "days", ylab = "confirmed cases")
+
+compare = c(covid$Count[40], covid$Count[66] - covid$Count[40])
+bar.compare = barplot(compare, names.arg = c("first 40 days", "later 26 days"), col = c("red", "yellow"), main = "infection number comparison")
+text(bar.compare,0, paste(compare) , cex=2, pos = 3) 
+
+#by differencing, data before day 35 is less informative
+d0 = covid$Count
+d1 = c(0, diff(covid$Count))
+d1
+d3 = d1[35:66]
+```
+
+barplot.my <-barplot(CrossValidation.result,  xlab = "Average the sum of squares of errors",  col=c(rgb(0.3,0.1,0.4,0.6) , rgb(0.3,0.5,0.4,0.6) , rgb(0.3,0.9,0.4,0.6) ,  rgb(0.3,0.9,0.4,0.6)), names.arg = c(c("Jack","Li","Group" )), )
+title(main = "Cross Validation result")
+
+text(barplot.my,0, paste(round(CrossValidation.result), sep="") , cex=1, pos = 3) 
+lines(AIC.compare)
+```
+
+```{r}
+#using d3 as valid dataset, fit the linear model
+time = 1:length(d3)
+covid2 = data.frame(time, "Count" = d0[35:66])
+lg.covid = log(covid2$Count)
+linearM = lm(covid2$Count ~ time + I(time^2) + I(time^3) + I(time^4))
+linearM
+#linear model plot with fitted curve
+plot(time, covid2$Count, type = "l")
+lines(linearM$fitted.values,col = "red")
+#linear model's residual
+plot(linearM$residuals, type = "l")
+newpt
+```
+
+```{r}
+#residual analysis
+resi = linearM$residuals
+plot(resi, type = "l")
+acf2(resi)
+
+```
+
+```{r}
+
+#Cross Validation
+resi = linearM$residuals
+sse = matrix(NA, nrow=3,ncol=10)
+for(i in 1:3) {
+  
+  # Split train/test
+  train = window(resi,start=1,end=24+i)
+  test = window(resi, start=24+i, end=24 + i + 4)
+  
+  # Fit
+  model1 = arima(train,order = c(1,0,1), seasonal = list(order = c(1,0,1), period = 4), method = "ML")
+  model2 = arima(train,order = c(1,0,1), seasonal = list(order = c(1,0,1), period = 8), method = "ML")
+  model3 = arima(train,order = c(1,0,1), seasonal = list(order = c(1,0,1), period = 12), method = "ML")
+  model4 = arima(train,order = c(1,0,1), seasonal = list(order = c(1,1,1), period = 8), method = "ML")
+  model5 = arima(train,order = c(1,1,0), seasonal = list(order = c(0,1,1), period = 8), method = "ML")
+  model6 = arima(train,order = c(1,1,1), seasonal = list(order = c(1,1,0), period = 8), method = "ML")
+  model7 = arima(train,order = c(1,0,1), seasonal = list(order = c(1,0,1), period = 0), method = "ML")
+  model8 = arima(train,order = c(1,1,0), seasonal = list(order = c(0,0,1), period = 0), method = "ML")
+  model9 = arima(train,order = c(1,1,1), seasonal = list(order = c(1,0,0), period = 0), method = "ML")
+  model10 = arima(train,order = c(1,0,1), seasonal = list(order = c(1,1,0), period = 0), method = "ML")
+  
+  #sarima(resi, p = 1, d = 0, q = 0, P=0,D=0,Q=0,S=0)
+  
+  #predic model
+  preM1 = predict(model1, n.ahead = 5)
+  preM2 = predict(model2, n.ahead = 5)
+  preM3 = predict(model3, n.ahead = 5)
+  preM4 = predict(model4, n.ahead = 5)
+  preM5 = predict(model5, n.ahead = 5)
+  preM6 = predict(model6, n.ahead = 5)
+  preM7 = predict(model7, n.ahead = 5)
+  preM8 = predict(model8, n.ahead = 5)
+  preM9 = predict(model9, n.ahead = 5)
+  preM10 = predict(model10, n.ahead = 5)
+  # Test
+  sse[i,1] = sum((test - preM1$pred)^2)
+  sse[i,2] = sum((test - preM2$pred)^2)
+  sse[i,3] = sum((test - preM3$pred)^2)
+  sse[i,4] = sum((test - preM4$pred)^2)
+  sse[i,5] = sum((test - preM5$pred)^2)
+  sse[i,6] = sum((test - preM6$pred)^2)
+  sse[i,7] = sum((test - preM7$pred)^2)
+  sse[i,8] = sum((test - preM8$pred)^2)
+  sse[i,9] = sum((test - preM9$pred)^2)
+  sse[i,10] = sum((test - preM10$pred)^2)
+}
+
+apply(sse,2,mean)
+
+```
+```{r}
+#Analysis the selected model
+a = arima(resi,order = c(1,0,1), seasonal = list(order = c(1,0,1), period = 8), method = "ML")
+par(mfrow = c(2, 1)) 
+plot(a$residuals, main = "residual plot of the sarima model", ylab = "residual", xlab = "time")
+acf(a$residuals, ylim =c(-1,1), main = "")
+#pacf(a$residuals, ylim =c(-1,1), main = "")
+```
+
+```{r}
+#fcast
+par(mfrow = c(1,1))
+model2 = arima(linearM$residuals,order = c(1,0,1), seasonal = list(order = c(1,0,1), period = 8), method = "ML")
+resiFcast = predict(model2, n.ahead = 10)
+```
+
+```{r}
+#Calculated the forecast result
+intcep = linearM$coefficients[1]
+co1 = linearM$coefficients[2]
+co2 = linearM$coefficients[3]
+co3 = linearM$coefficients[4]
+co4 = linearM$coefficients[5]
+#summary(linearM)
+newpt = rep(0, 10)
+for(i in 1:10) {
+  a = intcep + (32 + i)*co1 +  ((32 + i)^2)*co2 +  ((32 + i)^3)*co3 +  ((32 + i)^4)*co4 
+  newpt[i] = a
+}
+
+resiFcast$pred
+```
+
+
+
+```{r}
+#plot the prediction with the 95% CI
+newpt = newpt + resiFcast$pred
+
+confi = confint(linearM)
+
+upperError =c(0,10)
+for(i in 1:10) {
+  a = confi[1,2] + (32 + i)*confi[2,2] +  ((32 + i)^2)*confi[3,2] +  ((32 + i)^3)*confi[4,2] +  ((32 + i)^4)*confi[5,2] 
+  upperError[i] = a
+}
+upperError = upperError + 2*resiFcast$se
+
+lowerError =c(0,10)
+for(i in 1:10) {
+  a = confi[1,1] + (32 + i)*confi[2,1] +  ((32 + i)^2)*confi[3,1] +  ((32 + i)^3)*confi[4,1] +  ((32 + i)^4)*confi[5,1] 
+  lowerError[i] = a
+}
+lowerError = lowerError - 2 * resiFcast$se
+time2 = 1:(length(covid2$time) + 10)
+```
+
+```{r}
+plot(time2, c(covid2$Count, newpt), type = "l", ylim = c(-200000, 200000))
+points(33:42, newpt, col = "red",  type = "l")
+lines(33:42,  upperError, col = "blue")
+lines(33:42, lowerError, col = "blue")
+
+plot(time2, c(covid2$Count, newpt), type = "l", ylim = c(-200000, 200000))
+lines(33:42, newpt, col = "red")
+lines(33:42,newpt - 2*resiFcast$se, col = "blue")
+lines(33:42, newpt + 2*resiFcast$se, col = "blue")
+
+```
+
+
+
+```{r}
+#start group model
+time = 1:(length(d3) - 1)
+diff.data = diff(covid2$Count)
+grp.model = lm(diff.data~ time +  I(time^2) + I(time^3) + log(time) )
+summary(grp.model)
+plot(diff.data, type = "l", main = "fit group model within a linear trend", xlab = "time start from day 35", ylab = "differenced data")
+lines(grp.model$fitted.values, col = "red")
+plot(grp.model$residuals, type = "l")#, ylim = c(-1,1))
+acf2(grp.model$residuals)
+```
+
+
+
+```{r}
+#group model forecast
+intcep = grp.model$coefficients[1]
+co1 = grp.model$coefficients[2]
+co2 = grp.model$coefficients[3]
+co3 = grp.model$coefficients[4]
+co4 = grp.model$coefficients[5]
+#co5 = grp.model$coefficients[6]
+gp.newpt = rep(0, 10)
+for(i in 1:10) {
+  a = intcep + (31 + i)*co1 +  ((31 + i)^2)*co2 +  ((31 + i)^3)*co3 +  (log(31 + i))*co4 #+ co5 * exp(32+i)
+  gp.newpt[i] = a
+}
+
+plot(grp.model$fitted.values, type = "l", xlim = c(0, 42), ylim = c(0, 10000))
+lines(32:41, gp.newpt, col = "red")
+
+
+
+```
+
+```{r}
+
+#Cross Validation for group model
+resi = grp.model$residuals
+sse2 = matrix(NA, nrow=3,ncol=10)
+for(i in 1:3){
+  
+  # Split train/test
+  train = window(resi,start=1,end=23+i)
+  test = window(resi, start=23+i, end = 23 + i + 4)
+  
+  # Fit
+  model1 = arima(train,order = c(1,0,1), seasonal = list(order = c(1,0,1), period = 4), method = "ML")
+  model2 = arima(train,order = c(1,1,1), seasonal = list(order = c(0,0,1), period = 8), method = "ML")
+  model3 = arima(train,order = c(0,0,1), seasonal = list(order = c(1,0,1), period = 4), method = "ML")
+  model4 = arima(train,order = c(1,0,0), seasonal = list(order = c(0,1,1), period = 8), method = "ML")
+  model5 = arima(train,order = c(1,1,0), seasonal = list(order = c(1,1,0), period = 8), method = "ML")
+  model6 = arima(train,order = c(1,1,1), seasonal = list(order = c(1,1,0), period = 8), method = "ML")
+  model7 = arima(train,order = c(1,0,1), seasonal = list(order = c(1,0,1), period = 0), method = "ML")
+  model8 = arima(train,order = c(1,1,0), seasonal = list(order = c(0,0,1), period = 0), method = "ML")
+  model9 = arima(train,order = c(1,0,1), seasonal = list(order = c(1,0,0), period = 0), method = "ML")
+  model10 = arima(train,order = c(1,0,2), seasonal = list(order = c(2,0,2), period = 4), method = "ML")
+  
+  
+  #sarima(resi, p = 1, d = 1, q = 0, P=0,D=1,Q=0,S=4)
+  #sarima(resi, p = 1, d = 0, q = 0, P=0,D=0,Q=0,S=0)
+  
+  #predic model
+  preM1 = predict(model1, n.ahead = 5)
+  preM2 = predict(model2, n.ahead = 5)
+  preM3 = predict(model3, n.ahead = 5)
+  preM4 = predict(model4, n.ahead = 5)
+  preM5 = predict(model5, n.ahead = 5)
+  preM6 = predict(model6, n.ahead = 5)
+  preM7 = predict(model7, n.ahead = 5)
+  preM8 = predict(model8, n.ahead = 5)
+  preM9 = predict(model9, n.ahead = 5)
+  preM10 = predict(model10, n.ahead = 5)
+  # Test
+  sse2[i,1] = sum((test - preM1$pred)^2)
+  sse2[i,2] = sum((test - preM2$pred)^2)
+  sse2[i,3] = sum((test - preM3$pred)^2)
+  sse2[i,4] = sum((test - preM4$pred)^2)
+  sse2[i,5] = sum((test - preM5$pred)^2)
+  sse2[i,6] = sum((test - preM6$pred)^2)
+  sse2[i,7] = sum((test - preM7$pred)^2)
+  sse2[i,8] = sum((test - preM8$pred)^2)
+  sse2[i,9] = sum((test - preM9$pred)^2)
+  sse2[i,10] = sum((test - preM10$pred)^2)
+  
+}
+
+apply(sse2,2,mean)
+
+```
+
+```{r}
+#group model analysis 
+sarima(grp.model$residuals, p = 1, d = 0, q = 2, P = 2, D = 0, Q = 2, S = 4)
+
+best.model = arima(train,order = c(1,0,2), seasonal = list(order = c(2,0,2), period = 4), method = "ML")
+bmodel = sarima(resi, p=1,d=0,q=2,P=2, D = 0, Q = 2, S = 4)
+grp.predict = predict(best.model, n.ahead = 10)
+gp.pd = gp.newpt + grp.predict$pred
+
+plot(c(diff.data, gp.pd), type = "l", xlim = c(0, 42), ylim = c(0, 13000))
+lines(32:41, gp.pd, col = "red")
+```
+
+```{r}
+#Summary of three model
+par(mfrow = c(1,2))
+final.data = cumsum(c(diff.data, gp.pd))
+final.data
+#group prediction data
+plot(c(covid$Count[1:35],final.data), type = "l", col = "black", xlab = "Days", ylab = "Cases")
+abline(v = 67)
+#Jack's predition
+lines(67:76, newpt, col = "blue")
+text(67, 4, "prediction")
+LiModel = c(35726.7, 41311.45,  47463.68,  54249.20,  61710.97,  69874.26,  78768.62,  88434.95,  98921.09, 110274.67)
+lines(67:76, LiModel, col = "green")
+lines(67:76, final.data[32:41], col = "red")
+legend(1, 80000, legend=c("Group's model", "Ziyuan's model", "Haoyuan's model"),
+       col=c("red", "blue", "green"), lty=1:1, cex=0.8)
+
+plot(final.data[32:41], type = "l", col = "red", xlab = "Prediction(Day)", ylab = "Cases")
+lines(as.numeric(newpt), type = "l", col = "blue")
+lines(LiModel, type = "l", col = "green")
+legend(1, 103000, legend=c("Group's model", "Ziyuan's model", "Haoyuan's model"),
+       col=c("red", "blue", "green"), lty=1:1, cex=0.8)
+
+```
+
+
+```{r}
+#cross validation for the final 3 model
+jack.lm = linearM
+jack.resi = jack.lm$residuals
+jack.arma = arima(jack.resi,order = c(1,0,1), seasonal = list(order = c(1,0,1), period = 8), method = "ML")
+
+time = 1:length(d3)
+li.lm = lm(covid2$Count ~ I(time^2) + I(time^3) + I(time^4))
+li.resi = li.lm$residuals
+li.arma = arima(li.resi,order = c(2,0,0))
+
+group.lm = grp.model
+group.resi = group.lm$residuals
+group.arma = best.model
+
+AIC.compare = c(jack.arma$aic, li.arma$aic, group.arma$aic)
+AIC.compare
+sse3 = matrix(NA, nrow=3,ncol=3)
+for(i in 1:3){
+  
+  # Split train/test
+  jack.train = window(jack.resi,start=1,end=24+i)
+  li.train = window(li.resi,start=1,end=24+i)
+  group.train = window(group.resi,start=1,end=23+i)
+  
+  jack.test = window(jack.resi, start=24+i, end = 24 + i + 4)
+  li.test = window(li.resi, start=24+i, end = 24 + i + 4)
+  group.test = window(group.resi, start=23+i, end = 23 + i + 4)
+  
+  # Fit
+  model1 = arima(jack.train,order = c(1,0,1), seasonal = list(order = c(1,0,1), period = 8), method = "ML")
+  model2 = arima(li.train,order = c(2,0,0))
+  model3 = arima(group.train,order = c(1,0,2), seasonal = list(order = c(2,0,2), period = 4), method = "ML")
+  
+  
+  #sarima(resi, p = 1, d = 1, q = 0, P=0,D=1,Q=0,S=4)
+  #sarima(resi, p = 1, d = 0, q = 0, P=0,D=0,Q=0,S=0)
+  
+  #predic model
+  preM1 = predict(model1, n.ahead = 5)
+  preM2 = predict(model2, n.ahead = 5)
+  preM3 = predict(model3, n.ahead = 5)
+  
+  # Test           实际值      预测值
+  sse3[i,1] = sum((jack.test - preM1$pred)^2)
+  sse3[i,2] = sum((li.test - preM2$pred)^2)
+  sse3[i,3] = sum((group.test - preM3$pred)^2)
+  
+}
+
+CrossValidation.result = apply(sse3,2,mean)
+
+```
+
+```{r}
+#plot the result
+barplot.my <-barplot(CrossValidation.result,  xlab = "Average the sum of squares of errors",  col=c(rgb(0.3,0.1,0.4,0.6) , rgb(0.3,0.5,0.4,0.6) , rgb(0.3,0.9,0.4,0.6) ,  rgb(0.3,0.9,0.4,0.6)), names.arg = c(c("Jack","Li","Group" )), )
+title(main = "Cross Validation result")
+
+text(barplot.my,0, paste(round(CrossValidation.result), sep="") , cex=1, pos = 3) 
+lines(AIC.compare)
+```
+
+```{r}
+model1 = arima(train,order = c(1,0,1), seasonal = list(order = c(1,0,1), period = 4), method = "ML")
+fitted(model1)
+
+```
+
